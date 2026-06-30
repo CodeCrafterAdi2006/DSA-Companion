@@ -1,0 +1,360 @@
+{
+  "name": "DSA Tracker - Daily Reminder",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 20 * * *"
+            }
+          ]
+        }
+      },
+      "id": "1596d674-789e-4008-940f-fa436cea3bc0",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -240,
+        32
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "=Questions",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "457093fa-122d-4f54-aff1-30188157e577",
+      "name": "Read Questions",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        48,
+        32
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "=Days",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "68682ccf-a7d7-4669-a78b-c77a50929c87",
+      "name": "Read Days",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        320,
+        32
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const START_DATE = '2026-06-30';\nconst today = new Date();\ntoday.setHours(0, 0, 0, 0);\nconst formatDate = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');\nconst todayStr = formatDate(today);\nconst startDate = new Date(START_DATE + 'T00:00:00');\nconst dayNumber = Math.max(1, Math.round((today - startDate) / 86400000) + 1);\n\nconst questions = $('Read Questions').all().map(i => i.json);\nconst totalSolved = questions.filter(q => q.Status !== 'Dropped').length;\nconst targetPace = Math.round(dayNumber / 180 * 300);\nconst diff = totalSolved - targetPace;\nconst paceStr = diff >= 0\n  ? '\\u2705 ahead by ' + diff\n  : '\\u26a0\\ufe0f behind by ' + Math.abs(diff);\n\nconst dueReviews = questions.filter(q =>\n  q.Status === 'Active' && q.NextReviewDate && q.NextReviewDate <= todayStr\n);\n\nlet reviewList;\nif (dueReviews.length === 0) {\n  reviewList = '\\u2022 None \\u2014 clean slate \\ud83c\\udf89';\n} else {\n  reviewList = dueReviews.map(q => '\\u2022 ' + q.Problem + ' (Stage ' + q.Stage + ')').join('\\n');\n}\n\nconst message = '\\ud83d\\udcc5 Day ' + dayNumber + ' / 180\\n'\n  + 'Total solved: ' + totalSolved + '/300 (target pace: ' + targetPace + ') ' + paceStr + '\\n\\n'\n  + 'Due for review today:\\n'\n  + reviewList + '\\n\\n'\n  + 'Go solve in ChatGPT, then /done when ready.';\n\nreturn [{ json: { message: message } }];"
+      },
+      "id": "8e3250d1-f0c3-46cb-b377-1f5aa3d5578a",
+      "name": "Build Reminder",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        608,
+        32
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "={{ $json.message }}",
+        "additionalFields": {}
+      },
+      "id": "b0db48f0-7d8c-4fac-9fe7-18a1dce75f69",
+      "name": "Send Reminder",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        880,
+        32
+      ],
+      "webhookId": "YOUR_TELEGRAM_WEBHOOK_ID",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "AngelBot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "5 0 * * *"
+            }
+          ]
+        }
+      },
+      "id": "5ce809b8-ec6a-4f69-ba4a-ced6f8671cd8",
+      "name": "Schedule Trigger Midnight",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -240,
+        336
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "=Days",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "e611576e-3af0-4a12-a363-45e12f0a7b1b",
+      "name": "Read Days Midnight",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        48,
+        336
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const START_DATE = '2026-06-30';\nconst allDays = $input.all().map(i => i.json);\n\nconst today = new Date();\ntoday.setHours(0, 0, 0, 0);\nconst startDate = new Date(START_DATE + 'T00:00:00');\n\nconst missingDays = [];\n\nfor (let d = new Date(startDate); d < today; d.setDate(d.getDate() + 1)) {\n  const formatDate = (date) => date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');\n  const dStr = formatDate(d);\n  const dayNum = Math.round((d - startDate) / 86400000) + 1;\n  \n  const exists = allDays.find(r => r.Date === dStr);\n  if (!exists) {\n    missingDays.push({\n      json: {\n        Date: dStr,\n        DayNumber: dayNum,\n        Logged: 'N',\n        NewCount: 0,\n        ReviewCount: 0\n      }\n    });\n  }\n}\n\nreturn missingDays;"
+      },
+      "id": "eea0c94f-95a4-4502-84fe-fb2b6fc09669",
+      "name": "Check Missing Days",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        336
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "=Days",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "Date"
+          ],
+          "schema": [
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "DayNumber",
+              "displayName": "DayNumber",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Logged",
+              "displayName": "Logged",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "NewCount",
+              "displayName": "NewCount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ReviewCount",
+              "displayName": "ReviewCount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "295ee88d-e9e3-47ad-8cb7-49704a7907de",
+      "name": "Write Missing Days",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        608,
+        336
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Read Questions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Questions": {
+      "main": [
+        [
+          {
+            "node": "Read Days",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Days": {
+      "main": [
+        [
+          {
+            "node": "Build Reminder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Reminder": {
+      "main": [
+        [
+          {
+            "node": "Send Reminder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger Midnight": {
+      "main": [
+        [
+          {
+            "node": "Read Days Midnight",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Days Midnight": {
+      "main": [
+        [
+          {
+            "node": "Check Missing Days",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Missing Days": {
+      "main": [
+        [
+          {
+            "node": "Write Missing Days",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "b9c279ba-a7f2-433c-a27d-1402ea474e1a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "c7dfbf5d9369ba93fd38b5a12614b1394e0fa7c8c86ff31d13d11bea6ffc6227"
+  },
+  "nodeGroups": [],
+  "id": "6UcBXmdt7vw1KRZo",
+  "tags": []
+}

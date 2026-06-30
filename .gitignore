@@ -1,0 +1,3 @@
+# Ignore local workspace configurations containing private credentials/tokens
+current/
+.env

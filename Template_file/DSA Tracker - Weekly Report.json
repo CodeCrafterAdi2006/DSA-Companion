@@ -1,0 +1,300 @@
+{
+  "name": "DSA Tracker - Weekly Report",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.geminiBody.contents[0].parts[0].text }}",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        -320,
+        96
+      ],
+      "id": "05f9e21c-966a-4f37-9700-92d1a749c9df",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        -416,
+        336
+      ],
+      "id": "d36414a2-9c8e-4fbe-9443-11bc0e995f1d",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YOUR_GEMINI_CREDENTIAL_ID",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 21 * * 0"
+            }
+          ]
+        }
+      },
+      "id": "ce6001b4-a532-4593-8657-058aac3617b6",
+      "name": "Schedule Trigger1",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1664,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "=Log",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "4422dbe7-908a-4260-9186-10e8d313b91a",
+      "name": "Read Log1",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -1376,
+        128
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "=Questions",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "271018c8-d7e8-4622-8b44-d4f5fb8ce1f3",
+      "name": "Read Questions1",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -1104,
+        128
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "=Days",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "c4356ff6-5f63-4d76-82f4-fcae4a200448",
+      "name": "Read Days1",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -816,
+        128
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const START_DATE = '2026-06-30';\nconst today = new Date();\ntoday.setHours(0, 0, 0, 0);\nconst formatDate = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');\nconst todayStr = formatDate(today);\nconst startDate = new Date(START_DATE + 'T00:00:00');\nconst dayNumber = Math.max(1, Math.round((today - startDate) / 86400000) + 1);\nconst targetPace = Math.round(dayNumber / 180 * 300);\n\nconst logs = $('Read Log1').all().map(i => i.json);\nconst questions = $('Read Questions1').all().map(i => i.json);\nconst days = $('Read Days1').all().map(i => i.json);\n\nconst sevenDaysAgo = new Date(today);\nsevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);\nconst sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];\n\nconst weekLogs = logs.filter(l => l.Timestamp && l.Timestamp >= sevenDaysAgoStr);\nconst newCount = weekLogs.filter(l => l.Type === 'New').length;\nconst reviewCount = weekLogs.filter(l => l.Type === 'Review').length;\n\nlet missedDays = 0;\nfor (let d = new Date(sevenDaysAgo); d < today; d.setDate(d.getDate() + 1)) {\n  const ds = d.toISOString().split('T')[0];\n  const dayRow = days.find(r => r.Date === ds);\n  if (!dayRow || dayRow.Logged !== 'Y') missedDays++;\n}\n\nconst total = questions.filter(q => q.Status !== 'Dropped').length;\n\nconst backlogCount = questions.filter(q =>\n  q.Status === 'Active' && q.NextReviewDate && q.NextReviewDate < todayStr\n).length;\n\nconst patternMap = {};\nfor (const log of logs) {\n  const q = questions.find(qu => qu.Problem === log.Question);\n  const pat = q ? (q.Pattern || 'Unknown') : 'Unknown';\n  if (!patternMap[pat]) patternMap[pat] = [];\n  patternMap[pat].push(parseInt(log.Confidence) || 3);\n}\n\nlet strongest = 'N/A', weakest = 'N/A', strongestAvg = 0, weakestAvg = 6;\nfor (const [pat, confs] of Object.entries(patternMap)) {\n  const avg = confs.reduce((a, b) => a + b, 0) / confs.length;\n  if (avg > strongestAvg) { strongest = pat; strongestAvg = avg; }\n  if (avg < weakestAvg) { weakest = pat; weakestAvg = avg; }\n}\nstrongestAvg = strongestAvg.toFixed(1);\nweakestAvg = weakestAvg.toFixed(1);\n\nconst statsText = 'Day ' + dayNumber + '/180\\n'\n  + 'New this week: ' + newCount + ', Reviews this week: ' + reviewCount + '\\n'\n  + 'Missed days this week: ' + missedDays + '\\n'\n  + 'Cumulative solved: ' + total + '/300 (target pace: ' + targetPace + ')\\n'\n  + 'Review backlog (overdue): ' + backlogCount + '\\n'\n  + 'Strongest pattern: ' + strongest + ' (avg confidence ' + strongestAvg + ')\\n'\n  + 'Weakest pattern: ' + weakest + ' (avg confidence ' + weakestAvg + ')';\n\nconst prompt = 'You write a short, honest weekly status update for someone doing a 180-day, 300-question DSA prep routine. Be direct, not hypey. Max 5 lines. Flag the review backlog explicitly if it is above 5. If pace is behind target, say so plainly without softening it.\\n\\nStats:\\n' + statsText;\n\nreturn [{ json: { statsText: statsText, geminiBody: { contents: [{ parts: [{ text: prompt }] }] } } }];"
+      },
+      "id": "8954e690-3f25-4edd-9af1-4ecfbb5fcb81",
+      "name": "Compute Stats1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -544,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nlet report = '';\nif (response.text) {\n  report = response.text.trim();\n} else {\n  report = '⚠️ Could not generate weekly report. Raw stats:\\n' + $('Compute Stats1').item.json.statsText;\n}\nreturn [{ json: { report: report } }];"
+      },
+      "id": "57273711-b4dc-4172-bb09-18a7bff6bcd2",
+      "name": "Extract Report1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        16,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "={{ '\\ud83d\\udcca Weekly DSA Report\\n\\n' + $json.report }}",
+        "additionalFields": {}
+      },
+      "id": "e4db380b-6417-4c35-8ff9-4c05b469ccab",
+      "name": "Send Report1",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        304,
+        128
+      ],
+      "webhookId": "YOUR_TELEGRAM_WEBHOOK_ID",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "AngelBot"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Extract Report1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger1": {
+      "main": [
+        [
+          {
+            "node": "Read Log1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Log1": {
+      "main": [
+        [
+          {
+            "node": "Read Questions1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Questions1": {
+      "main": [
+        [
+          {
+            "node": "Read Days1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Days1": {
+      "main": [
+        [
+          {
+            "node": "Compute Stats1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compute Stats1": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Report1": {
+      "main": [
+        [
+          {
+            "node": "Send Report1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "3fca2773-8650-4eda-a18a-2b14d5f72c8b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "c7dfbf5d9369ba93fd38b5a12614b1394e0fa7c8c86ff31d13d11bea6ffc6227"
+  },
+  "nodeGroups": [],
+  "id": "cqKVBgwMkFb1yvuA",
+  "tags": []
+}

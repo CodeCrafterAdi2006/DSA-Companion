@@ -1,0 +1,1137 @@
+{
+  "name": "DSA Tracker - Telegram Logger",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.prompt }}",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        -160,
+        -96
+      ],
+      "id": "5a1e05f3-cefb-4c9e-a5e1-587235a1c8e5",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        -240,
+        64
+      ],
+      "id": "0d757706-b137-4dfb-8abb-a1fac85704e1",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "YOUR_GROQ_CREDENTIAL_ID",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Route Command1').item.json.message.chat.id }}",
+        "text": "🤖 DSA Tracker Commands:\n\n/done [describe what you solved] — Log a problem\n/skip — Mark today as skipped\n\nExample:\n/done Two Sum, new, 15 min, confidence 4, used hash map approach\n\nYou can also send messy multi-line messages with code — Gemini will parse it.",
+        "additionalFields": {}
+      },
+      "id": "eb456b38-c88c-4f5f-a9bf-2d4cb36293c4",
+      "name": "Send Help1",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -368,
+        416
+      ],
+      "webhookId": "YOUR_TELEGRAM_WEBHOOK_ID",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "AngelBot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json._chatId }}",
+        "text": "={{ '\\u23ed\\ufe0f Day ' + $json._dayNumber + ' skipped. Reviews due today will carry over until completed.' }}",
+        "additionalFields": {}
+      },
+      "id": "70b67852-d088-4907-94ab-f1d3eb973e9c",
+      "name": "Send Skip Confirm1",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        160,
+        176
+      ],
+      "webhookId": "YOUR_TELEGRAM_WEBHOOK_ID",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "AngelBot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "=Days",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "Date"
+          ],
+          "schema": [
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "DayNumber",
+              "displayName": "DayNumber",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Logged",
+              "displayName": "Logged",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "NewCount",
+              "displayName": "NewCount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ReviewCount",
+              "displayName": "ReviewCount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "e01ab716-fe65-466f-905b-cb9d08916936",
+      "name": "Upsert Days Skip1",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -112,
+        192
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const START_DATE = '2026-06-30';\nconst today = new Date();\ntoday.setHours(0, 0, 0, 0);\nconst formatDate = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');\nconst todayStr = formatDate(today);\nconst startDate = new Date(START_DATE + 'T00:00:00');\nconst dayNumber = Math.max(1, Math.round((today - startDate) / 86400000) + 1);\nconst chatId = $('Telegram Trigger1').item.json.message.chat.id;\nreturn [{ json: {\n  Date: todayStr, DayNumber: dayNumber, Logged: 'Y',\n  NewCount: 0, ReviewCount: 0,\n  _chatId: chatId, _dayNumber: dayNumber\n} }];"
+      },
+      "id": "d2239e46-d746-440a-b0b2-cde017aac330",
+      "name": "Prepare Skip Days1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -368,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json._route }}",
+              "value2": "skip"
+            }
+          ]
+        }
+      },
+      "id": "b330150d-849d-4ed4-a1a7-4bc131b3ccf4",
+      "name": "Is Skip1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -624,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Route Command1').item.json.message.chat.id }}",
+        "text": "={{ '\\u274c Could not parse your message. Please resend like this:\\n\\n/done [problem name], [new/review], [time] min, confidence [1-5]\\n\\nOptionally include: approach summary, mistakes, LeetCode link.\\n\\nError: ' + $('Validate Response1').item.json.error }}",
+        "additionalFields": {}
+      },
+      "id": "ef743679-ecb9-4ab2-ac6c-cf41fe6b7c95",
+      "name": "Send Parse Error1",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        672,
+        176
+      ],
+      "webhookId": "YOUR_TELEGRAM_WEBHOOK_ID",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "AngelBot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {}
+      },
+      "id": "7ed8dfa6-4252-4cea-9da7-51c5b314255b",
+      "name": "Send Confirmation1",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3008,
+        -96
+      ],
+      "webhookId": "YOUR_TELEGRAM_WEBHOOK_ID",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "AngelBot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const sr = $('Spaced Rep Logic1').item.json;\nconst statusLine = sr.Status === 'Mastered'\n  ? 'Mastered! \\ud83c\\udf89 No more reviews scheduled.'\n  : 'Next review: ' + sr.NextReviewDate;\nconst message = '\\u2705 Logged: ' + sr.Problem\n  + '\\nType: ' + sr._type + ' | Pattern: ' + (sr.Pattern || 'N/A')\n  + ' | Time: ' + sr._timeTakenMin + 'min | Confidence: ' + sr.LastConfidence + '/5'\n  + '\\n' + statusLine;\nreturn [{ json: { chatId: sr._chatId, message: message } }];"
+      },
+      "id": "f0cb4fbb-2620-4270-85b8-0cdb83cefee2",
+      "name": "Build Confirmation1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2752,
+        -96
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "=Days",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "Date"
+          ],
+          "schema": [
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "DayNumber",
+              "displayName": "DayNumber",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Logged",
+              "displayName": "Logged",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "NewCount",
+              "displayName": "NewCount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ReviewCount",
+              "displayName": "ReviewCount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "37d4f129-8fb4-4119-bdad-71492754901f",
+      "name": "Upsert Days1",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2496,
+        -96
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const sr = $('Spaced Rep Logic1').item.json;\nconst allDays = $('Read Days1').all().map(i => i.json);\nconst todayStr = sr._todayStr;\nconst existing = allDays.find(d => d.Date === todayStr);\nlet newCount = existing ? (parseInt(existing.NewCount) || 0) : 0;\nlet reviewCount = existing ? (parseInt(existing.ReviewCount) || 0) : 0;\nif (sr._type === 'New') {\n  newCount++;\n} else {\n  reviewCount++;\n}\nreturn [{ json: {\n  Date: todayStr,\n  DayNumber: sr._dayNumber,\n  Logged: 'Y',\n  NewCount: newCount,\n  ReviewCount: reviewCount\n} }];"
+      },
+      "id": "a7c653be-2647-4775-bee9-64b645680bfd",
+      "name": "Prepare Days Row1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2240,
+        -96
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "=Days",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "ea41da12-1cf4-40ab-8a70-bb1e61b6cc8a",
+      "name": "Read Days1",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1968,
+        -96
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "=Log",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "DayNumber",
+              "displayName": "DayNumber",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Question",
+              "displayName": "Question",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Type",
+              "displayName": "Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "TimeTakenMin",
+              "displayName": "TimeTakenMin",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Confidence",
+              "displayName": "Confidence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Summary",
+              "displayName": "Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Mistake",
+              "displayName": "Mistake",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "RawInput",
+              "displayName": "RawInput",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "bf224612-de67-4dca-8c6e-f2827ca6d08c",
+      "name": "Append Log1",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1712,
+        -96
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const sr = $('Spaced Rep Logic1').item.json;\nreturn [{ json: {\n  Timestamp: new Date().toISOString(),\n  DayNumber: sr._dayNumber,\n  Question: sr.Problem,\n  Type: sr._type,\n  TimeTakenMin: sr._timeTakenMin,\n  Confidence: sr.LastConfidence,\n  Summary: sr._summary,\n  Mistake: sr._mistake,\n  RawInput: sr._rawMessage\n} }];"
+      },
+      "id": "346be808-963f-4076-b9ab-b5a239aab255",
+      "name": "Prepare Log Row1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1456,
+        -96
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "=Questions",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "ID"
+          ],
+          "schema": [
+            {
+              "id": "ID",
+              "displayName": "ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Problem",
+              "displayName": "Problem",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Link",
+              "displayName": "Link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Topic",
+              "displayName": "Topic",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Pattern",
+              "displayName": "Pattern",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Difficulty",
+              "displayName": "Difficulty",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "DateAdded",
+              "displayName": "DateAdded",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "NextReviewDate",
+              "displayName": "NextReviewDate",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "LastConfidence",
+              "displayName": "LastConfidence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Stage",
+              "displayName": "Stage",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "_type",
+              "displayName": "_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "_dayNumber",
+              "displayName": "_dayNumber",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "_timeTakenMin",
+              "displayName": "_timeTakenMin",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "_summary",
+              "displayName": "_summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "_mistake",
+              "displayName": "_mistake",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "_rawMessage",
+              "displayName": "_rawMessage",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "_chatId",
+              "displayName": "_chatId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "_todayStr",
+              "displayName": "_todayStr",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "6214fac4-132a-428b-8a1f-55d731e6dc4d",
+      "name": "Upsert Question1",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1200,
+        -96
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const INTERVALS = [1, 3, 7, 14, 30, 60];\nconst START_DATE = '2026-06-30';\n\nconst parsed = $('Validate Response1').item.json;\nconst questions = $('Read Questions1').all().map(i => i.json);\nconst rawMessage = $('Extract Message1').item.json.rawMessage;\nconst chatId = $('Extract Message1').item.json.chatId;\n\nconst today = new Date();\ntoday.setHours(0, 0, 0, 0);\nconst formatDate = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');\nconst todayStr = formatDate(today);\nconst startDate = new Date(START_DATE + 'T00:00:00');\nconst dayNumber = Math.max(1, Math.round((today - startDate) / 86400000) + 1);\n\nconst existing = questions.find(q =>\n  q.Problem && q.Problem.toLowerCase().trim() === parsed.problem.toLowerCase().trim()\n);\n\nlet type = parsed.type;\nlet stage, nextReviewDate, status, id, dateAdded, link, topic, pattern, difficulty;\n\nif (existing) {\n  if (type === 'New') type = 'Review';\n  stage = parseInt(existing.Stage) || 0;\n  const conf = parsed.confidence;\n  if (conf <= 2) {\n    stage = 0;\n  } else if (conf === 3) {\n    stage = Math.min(stage + 1, INTERVALS.length - 1);\n  } else {\n    stage = Math.min(stage + 2, INTERVALS.length - 1);\n  }\n  const nrd = new Date(today);\n  nrd.setDate(nrd.getDate() + INTERVALS[stage]);\n  const formatDate = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');\n  nextReviewDate = formatDate(nrd);\n  status = existing.Status || 'Active';\n  if (stage >= INTERVALS.length - 1 && conf >= 4) {\n    status = 'Mastered';\n  }\n  id = existing.ID;\n  dateAdded = existing.DateAdded;\n  link = parsed.link || existing.Link || '';\n  topic = existing.Topic || '';\n  pattern = parsed.summary || existing.Pattern || '';\n  difficulty = existing.Difficulty || '';\n} else {\n  type = 'New';\n  id = Date.now().toString(36);\n  stage = 0;\n  const nrd = new Date(today);\n  nrd.setDate(nrd.getDate() + INTERVALS[0]);\n  const formatDate = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');\n  nextReviewDate = formatDate(nrd);\n  status = 'Active';\n  dateAdded = todayStr;\n  link = parsed.link || '';\n  topic = '';\n  pattern = parsed.summary || '';\n  difficulty = '';\n}\n\nreturn [{ json: {\n  ID: id, Problem: parsed.problem.trim(), Link: link, Topic: topic,\n  Pattern: pattern, Difficulty: difficulty, DateAdded: dateAdded,\n  Status: status, Stage: stage, NextReviewDate: nextReviewDate,\n  LastConfidence: parsed.confidence,\n  _type: type, _dayNumber: dayNumber, _timeTakenMin: parsed.timeTakenMin,\n  _summary: parsed.summary, _mistake: parsed.mistake,\n  _rawMessage: rawMessage, _chatId: chatId, _todayStr: todayStr\n} }];"
+      },
+      "id": "452161af-3885-42f7-abc8-e3db432c21ea",
+      "name": "Spaced Rep Logic1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        928,
+        -96
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "=Questions",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "13e1f5ff-5e01-4a04-9cf8-0cd63c0bb22e",
+      "name": "Read Questions1",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        672,
+        -96
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.valid }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "19f53dc1-75d1-4dd3-9e4b-11a943799bfe",
+      "name": "Is Valid Parse1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        416,
+        -96
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nif (!response.text) {\n  return [{ json: { valid: false, error: 'Empty or missing text response from LLM Chain' } }];\n}\n\ntry {\n  // Strip any markdown code blocks (e.g. ```json ... ```) if the model outputs them\n  let cleanText = response.text.trim();\n  if (cleanText.startsWith('```')) {\n    cleanText = cleanText.replace(/^```json\\s*/i, '').replace(/```$/, '').trim();\n  }\n\n  const parsed = JSON.parse(cleanText);\n  if (!parsed.problem || typeof parsed.problem !== 'string' || parsed.problem.trim() === '') {\n    return [{ json: { valid: false, error: 'Missing or empty problem name' } }];\n  }\n  \n  return [{ json: {\n    valid: true,\n    problem: parsed.problem.trim(),\n    type: ['New', 'Review'].includes(parsed.type) ? parsed.type : 'New',\n    timeTakenMin: Math.max(0, Math.round(Number(parsed.timeTakenMin) || 0)),\n    confidence: Math.max(1, Math.min(5, Math.round(Number(parsed.confidence) || 3))),\n    summary: (parsed.summary || '').trim(),\n    mistake: (parsed.mistake || '').trim(),\n    link: (parsed.link || '').trim()\n  }}];\n} catch (e) {\n  return [{ json: { valid: false, error: 'JSON parse error: ' + e.message } }];\n}"
+      },
+      "id": "036ab975-ddb8-4d69-8c31-4e86f26812b1",
+      "name": "Validate Response1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        160,
+        -96
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const msg = $input.first().json;\nconst raw = msg.message.text || '';\nconst chatId = msg.message.chat.id;\nconst content = raw.replace(/^\\/done\\s*/i, '').trim();\n\nconst prompt = 'You extract structured data from a casual DSA practice log message. The user does not follow a strict format. Return ONLY valid JSON, no markdown fences, no preamble.\\n\\nSchema:\\n{\\n  \"problem\": string,\\n  \"type\": \"New\" | \"Review\",\\n  \"timeTakenMin\": number,\\n  \"confidence\": number (1-5),\\n  \"summary\": string (one line: pattern/approach used),\\n  \"mistake\": string (empty string if none mentioned),\\n  \"link\": string (empty string if none provided)\\n}\\n\\nIf type is not explicitly stated, infer \"New\" unless the message implies this is a repeat/review.\\nIf confidence is not stated, default to 3.\\nIf time is not stated, default to 0.\\n\\nMessage:\\n\"\"\"\\n' + content + '\\n\"\"\"';\n\nconst geminiBody = {\n  contents: [\n    {\n      parts: [\n        {\n          text: prompt\n        }\n      ]\n    }\n  ],\n  generationConfig: {\n    responseMimeType: 'application/json'\n  }\n};\n\nreturn [{ json: { rawMessage: raw, chatId, prompt, geminiBody } }];"
+      },
+      "id": "096a03ea-35f6-4f1b-bbb6-116017088b21",
+      "name": "Extract Message1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -368,
+        -96
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json._route }}",
+              "value2": "done"
+            }
+          ]
+        }
+      },
+      "id": "b6066ccd-6553-49c6-9fbd-19edd8ab0704",
+      "name": "Is Done1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -624,
+        -96
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const msg = $input.first().json;\nconst text = (msg.message?.text || '').trim().toLowerCase();\nlet route = 'unknown';\nif (text.startsWith('/done')) route = 'done';\nelse if (text.startsWith('/skip')) route = 'skip';\nreturn [{ json: { ...msg, _route: route } }];"
+      },
+      "id": "fa9fd0a9-4ab2-418d-b40c-ffa5888d54d8",
+      "name": "Route Command1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -864,
+        -96
+      ]
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "0910873f-a9c9-45e0-b87c-67d229f16d0a",
+      "name": "Telegram Trigger1",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -1152,
+        -96
+      ],
+      "webhookId": "YOUR_TELEGRAM_WEBHOOK_ID",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "AngelBot"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Validate Response1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert Days Skip1": {
+      "main": [
+        [
+          {
+            "node": "Send Skip Confirm1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Skip Days1": {
+      "main": [
+        [
+          {
+            "node": "Upsert Days Skip1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Skip1": {
+      "main": [
+        [
+          {
+            "node": "Prepare Skip Days1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Help1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Confirmation1": {
+      "main": [
+        [
+          {
+            "node": "Send Confirmation1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert Days1": {
+      "main": [
+        [
+          {
+            "node": "Build Confirmation1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Days Row1": {
+      "main": [
+        [
+          {
+            "node": "Upsert Days1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Days1": {
+      "main": [
+        [
+          {
+            "node": "Prepare Days Row1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append Log1": {
+      "main": [
+        [
+          {
+            "node": "Read Days1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Log Row1": {
+      "main": [
+        [
+          {
+            "node": "Append Log1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert Question1": {
+      "main": [
+        [
+          {
+            "node": "Prepare Log Row1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Spaced Rep Logic1": {
+      "main": [
+        [
+          {
+            "node": "Upsert Question1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Questions1": {
+      "main": [
+        [
+          {
+            "node": "Spaced Rep Logic1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Valid Parse1": {
+      "main": [
+        [
+          {
+            "node": "Read Questions1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Parse Error1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Response1": {
+      "main": [
+        [
+          {
+            "node": "Is Valid Parse1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Message1": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Done1": {
+      "main": [
+        [
+          {
+            "node": "Extract Message1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Is Skip1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Command1": {
+      "main": [
+        [
+          {
+            "node": "Is Done1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger1": {
+      "main": [
+        [
+          {
+            "node": "Route Command1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "004caa8c-1bef-48af-8613-f4516ceba187",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "c7dfbf5d9369ba93fd38b5a12614b1394e0fa7c8c86ff31d13d11bea6ffc6227"
+  },
+  "nodeGroups": [],
+  "id": "pei7rchUvvCGOiXL",
+  "tags": []
+}
