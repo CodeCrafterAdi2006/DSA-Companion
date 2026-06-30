@@ -2,6 +2,9 @@
 
 A 180-day / 300-question DSA accountability system. Three n8n workflows, one Google Sheet, one Telegram bot.
 
+![Telegram Bot Interface: Logging problems, checking pace, receiving reviews, and reading weekly reports](Assets/telegramreports_1.png)
+*Telegram Bot Interface showing active logging, daily reminder pings, and weekly report briefs.*
+
 ---
 
 ## Quick Start
@@ -32,6 +35,15 @@ Date | DayNumber | Logged | NewCount | ReviewCount
 Key       | Value
 StartDate | 2026-06-30
 ```
+
+### Google Sheets Layout Example
+
+Here is how your Google Spreadsheet will look once logged:
+
+| Questions Tab | Logs Tab | Days Tab |
+|---|---|---|
+| ![Questions Tab](Assets/googlesheets_reports.png) | ![Logs Tab](Assets/googlesheets_report2.png) | ![Days Tab](Assets/googesheets_report3.png) |
+| *Questions list, stages, and review dates.* | *History log of every study/review transaction.* | *Daily stats tracking your pace.* |
 
 > **Tip:** Leave all tabs empty after the header row. Data is created automatically by the workflows.
 
@@ -155,6 +167,20 @@ Then go back to each imported workflow and select the correct credential on ever
 │   → Gemini narrative → Send Telegram report              │
 └──────────────────────────────────────────────────────────┘
 ```
+
+### n8n Workflow Canvas Views
+
+#### 1. Workflow 2: Telegram Logger (Message Parser & Database Router)
+![Telegram Logger Workflow Canvas](Assets/Telegram_logger.png)
+*Telegram Logger Workflow: Handles inbound messages, routes command type, queries sheet questions, parses via Groq/Llama-3.3, processes spaced rep scheduling, and logs to sheet tabs.*
+
+#### 2. Workflow 1: Daily Reminder & Midnight Backfill
+![Daily Reminder Workflow Canvas](Assets/Daily%20Reminder.png)
+*Daily Reminder Workflow: Chain A calculates study metrics and sends reminders at 8:00 PM; Chain B backfills missed days with 'Logged = N' at 12:05 AM.*
+
+#### 3. Workflow 3: Weekly Report (Gemini Narrated Summary)
+![Weekly Report Workflow Canvas](Assets/weekly%20reports.png)
+*Weekly Report Workflow: Sunday 9:00 PM cron reads all metrics, computes stats, queries Gemini API for a direct status narrative, and pings Telegram.*
 
 ---
 
